@@ -1,0 +1,42 @@
+{
+  "as_of": "아직 수집 전",
+  "updated_at": "GitHub Actions 실행 전",
+  "news_scores": [
+    {
+      "name": "미국 증시",
+      "flag": "🇺🇸",
+      "score": 50,
+      "count": 0,
+      "positive": 0,
+      "negative": 0
+    },
+    {
+      "name": "한국 증시",
+      "flag": "🇰🇷",
+      "score": 50,
+      "count": 0,
+      "positive": 0,
+      "negative": 0
+    }
+  ],
+  "community_scores": [
+    {
+      "name": "미국 관련 커뮤니티",
+      "flag": "🇺🇸",
+      "score": 50,
+      "count": 0,
+      "positive": 0,
+      "negative": 0
+    },
+    {
+      "name": "한국 관련 커뮤니티",
+      "flag": "🇰🇷",
+      "score": 50,
+      "count": 0,
+      "positive": 0,
+      "negative": 0
+    }
+  ],
+  "news": [],
+  "posts": []
+}
