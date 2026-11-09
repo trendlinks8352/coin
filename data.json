@@ -1,42 +1,57 @@
 {
-  "as_of": "아직 수집 전",
-  "updated_at": "GitHub Actions 실행 전",
-  "news_scores": [
-    {
-      "name": "미국 증시",
-      "flag": "🇺🇸",
-      "score": 50,
+  "as_of": null,
+  "updated_at": null,
+  "window": {},
+  "scope": "Nasdaq / semiconductor only",
+  "scores": {
+    "us_news": {
+      "score": null,
+      "label": "데이터 부족",
       "count": 0,
       "positive": 0,
-      "negative": 0
+      "neutral": 0,
+      "negative": 0,
+      "confidence": "산출 불가",
+      "coverage": "수집 실행 전"
     },
-    {
-      "name": "한국 증시",
-      "flag": "🇰🇷",
-      "score": 50,
+    "kr_news": {
+      "score": null,
+      "label": "데이터 부족",
       "count": 0,
       "positive": 0,
-      "negative": 0
-    }
-  ],
-  "community_scores": [
-    {
-      "name": "미국 관련 커뮤니티",
-      "flag": "🇺🇸",
-      "score": 50,
-      "count": 0,
-      "positive": 0,
-      "negative": 0
+      "neutral": 0,
+      "negative": 0,
+      "confidence": "산출 불가",
+      "coverage": "수집 실행 전"
     },
-    {
-      "name": "한국 관련 커뮤니티",
-      "flag": "🇰🇷",
-      "score": 50,
+    "us_community": {
+      "score": null,
+      "label": "데이터 부족",
       "count": 0,
       "positive": 0,
-      "negative": 0
+      "neutral": 0,
+      "negative": 0,
+      "confidence": "산출 불가",
+      "coverage": "수집 실행 전"
+    },
+    "kr_community": {
+      "score": null,
+      "label": "데이터 부족",
+      "count": 0,
+      "positive": 0,
+      "neutral": 0,
+      "negative": 0,
+      "confidence": "산출 불가",
+      "coverage": "수집 실행 전"
     }
-  ],
-  "news": [],
-  "posts": []
+  },
+  "source_counts": {},
+  "items": {
+    "us_news": [],
+    "kr_news": [],
+    "us_community": [],
+    "kr_community": []
+  },
+  "history": [],
+  "collection_notes": []
 }
