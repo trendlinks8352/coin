@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Daily Nasdaq + semiconductor news/community sentiment collector.
 News sources: Google News RSS multi-query.
-Community: Reddit official OAuth API (optional) + publicly indexed DCInside/Naver Cafe Google News RSS.
+Community: Google News RSS indexing of public Reddit, DCInside and Naver Cafe pages only; no Reddit API/OAuth.
 No browser-side secrets. Scores are independent: news != community.
 """
-import os, json, re, math, time, urllib.parse, urllib.request, urllib.error
+import json, re, time, urllib.parse, urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -39,14 +39,14 @@ US_COMMUNITY_QUERIES = [
     'site:reddit.com/r/semiconductor (chip OR semiconductor OR HBM)',
     'site:reddit.com/r/NVDA_Stock Nvidia semiconductor',
     'site:reddit.com/r/AMD_Stock AMD semiconductor',
-    'site:reddit.com/r/wallstreetbets (Nasdaq OR NVDA OR AMD OR SOXL OR semiconductor)',
-    '(site:dcinside.com OR site:gall.dcinside.com) (나스닥 OR 미국반도체 OR 엔비디아 OR 마이크론 OR SOXL)',
-    'site:cafe.naver.com (나스닥 OR 미국반도체 OR 엔비디아 OR 마이크론)'
+    'site:reddit.com/r/wallstreetbets (Nasdaq OR NVDA OR AMD OR SOXL OR semiconductor)' 
 ]
 KR_COMMUNITY_QUERIES = [
     '(site:dcinside.com OR site:gall.dcinside.com) (삼성전자 OR SK하이닉스 OR HBM OR D램 OR 낸드 OR 반도체)',
     'site:cafe.naver.com (삼성전자 OR SK하이닉스 OR HBM OR D램 OR 낸드 OR 반도체)',
-    'site:reddit.com (Samsung Electronics OR SK Hynix OR KOSPI semiconductor OR Korean semiconductor)'
+    'site:reddit.com (Samsung Electronics OR SK Hynix OR KOSPI semiconductor OR Korean semiconductor)',
+    'site:reddit.com/r/korea (Samsung OR SK Hynix OR semiconductor)',
+    'site:reddit.com/r/stocks (Samsung OR SK Hynix OR Korean semiconductor)'
 ]
 
 POS = [
@@ -141,49 +141,6 @@ def hashlib_id(s):
     import hashlib
     return hashlib.sha256(s.encode("utf-8","ignore")).hexdigest()[:20]
 
-def reddit_token():
-    cid=os.getenv("REDDIT_CLIENT_ID"); secret=os.getenv("REDDIT_CLIENT_SECRET")
-    if not cid or not secret: return None
-    body=urllib.parse.urlencode({"grant_type":"client_credentials"}).encode()
-    req=urllib.request.Request("https://www.reddit.com/api/v1/access_token",data=body,
-        headers={"Authorization":"Basic "+__import__("base64").b64encode((cid+":"+secret).encode()).decode(),
-                 "User-Agent":os.getenv("REDDIT_USER_AGENT","script:nasdaq-semi-sentiment:v2.0 (contact: repo owner)")})
-    try:
-        with urllib.request.urlopen(req,timeout=20) as r: return json.loads(r.read()).get("access_token")
-    except Exception as e:
-        print("REDDIT_AUTH_FAIL",str(e)[:180]);return None
-
-def reddit_posts(subreddits, region):
-    token=reddit_token()
-    if not token:
-        print("REDDIT_SKIPPED: set GitHub Secrets REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET")
-        return []
-    ua=os.getenv("REDDIT_USER_AGENT","script:nasdaq-semi-sentiment:v2.0 (contact: repo owner)")
-    out=[]
-    for sub in subreddits:
-        url=f"https://oauth.reddit.com/r/{urllib.parse.quote(sub)}/new?limit=100"
-        req=urllib.request.Request(url,headers={"Authorization":"Bearer "+token,"User-Agent":ua})
-        try:
-            with urllib.request.urlopen(req,timeout=20) as r: data=json.loads(r.read())
-        except Exception as e:
-            print("REDDIT_FETCH_FAIL",sub,str(e)[:120]);continue
-        for child in data.get("data",{}).get("children",[]):
-            d=child.get("data",{})
-            created=datetime.fromtimestamp(d.get("created_utc",0),timezone.utc).astimezone(KST)
-            if not in_previous_day(created): continue
-            title=d.get("title",""); body=d.get("selftext","")
-            text=title+" "+body
-            if not TOPIC.search(text): continue
-            s=sentiment(text)
-            permalink="https://www.reddit.com"+d.get("permalink","")
-            out.append({"id":d.get("id") or hashlib_id(title+permalink),"title":title,
-                "link":permalink,"summary":body[:500],"source":"Reddit r/"+sub,
-                "source_type":"Reddit","region":region,"published_at":created.isoformat(),
-                "published_label":created.strftime("%m-%d %H:%M"),"upvotes":d.get("score",0),
-                "comments":d.get("num_comments",0),**s})
-        time.sleep(0.35)
-    return out
-
 def dedupe(items):
     seen=set(); result=[]
     for x in sorted(items,key=lambda z:z.get("published_at",""),reverse=True):
@@ -219,18 +176,10 @@ def main():
     us_news=collect_many(US_NEWS_QUERIES,"en-US","US","US:en","뉴스","US","us-news")
     kr_news=collect_many(KR_NEWS_QUERIES,"ko-KR","KR","KR:ko","뉴스","KR","kr-news")
 
-    # Reddit official API is used only when OAuth credentials are configured.
-    us_reddit=reddit_posts(["stocks","investing","semiconductor","NVDA_Stock","AMD_Stock","wallstreetbets"],"US")
-    kr_reddit=reddit_posts(["korea","stocks","investing"],"KR")
-    # Google News indexing is a fallback discovery route for public DCInside/Naver Cafe pages.
-    us_public=collect_many(US_COMMUNITY_QUERIES[6:],"ko-KR","KR","KR:ko","커뮤니티","US","us-public-community")
-    kr_public=collect_many(KR_COMMUNITY_QUERIES[:2],"ko-KR","KR","KR:ko","커뮤니티","KR","kr-public-community")
-    # Restrict Reddit posts to relevant market-specific keywords before combining.
-    us_reddit=[x for x in us_reddit if re.search(r"nasdaq|sox|nvidia|nvda|amd|micron|tsmc|asml|intel|semiconductor|chip|hbm|dram|nand|smh|soxl",x["title"]+" "+x["summary"],re.I)]
-    kr_reddit=[x for x in kr_reddit if re.search(r"korea|kospi|kosdaq|samsung|sk hynix|semiconductor|hbm|dram|nand|삼성|하이닉스|반도체",x["title"]+" "+x["summary"],re.I)]
-
-    us_comm=dedupe(us_reddit+us_public)
-    kr_comm=dedupe(kr_reddit+kr_public)
+    # Community collection is Google-indexed public pages only (including Reddit).
+    # No Reddit OAuth/API credentials or direct Reddit access are required.
+    us_comm=collect_many(US_COMMUNITY_QUERIES,"en-US","US","US:en","커뮤니티","US","us-community")
+    kr_comm=collect_many(KR_COMMUNITY_QUERIES,"ko-KR","KR","KR:ko","커뮤니티","KR","kr-community")
     groups={
         "us_news":us_news,"kr_news":kr_news,"us_community":us_comm,"kr_community":kr_comm
     }
@@ -246,10 +195,7 @@ def main():
     history=history[-365:]
     with open(hist_path,"w",encoding="utf-8") as f:json.dump(history,f,ensure_ascii=False,indent=2)
 
-    sources={
-      "reddit_us":len(us_reddit),"reddit_kr":len(kr_reddit),
-      "public_dc_naver_us":len(us_public),"public_dc_naver_kr":len(kr_public)
-    }
+    sources={"us_community":len(us_comm),"kr_community":len(kr_comm)}
     data={
       "as_of":day,"updated_at":NOW.isoformat(),
       "window":{"start":DAY_START.isoformat(),"end":DAY_END.isoformat(),"label":"전날 00:00~24:00 (한국시간)"},
@@ -260,8 +206,8 @@ def main():
       "history":history,
       "collection_notes":[
         "뉴스와 커뮤니티는 각각 독립 산출하며 합산하지 않습니다.",
-        "Reddit는 공식 OAuth API 자격 증명이 설정된 경우에만 수집합니다.",
-        "디시인사이드/네이버 카페는 공개 검색 색인 RSS 결과에 한정되며 비공개/로그인 전용 글은 포함되지 않습니다.",
+        "Reddit은 별도 API/OAuth 없이 Google 검색에 공개 색인된 게시글만 수집합니다.",
+        "디시인사이드/네이버 카페도 공개 검색 색인 결과만 포함하며 비공개/로그인 전용 글은 포함되지 않습니다.",
         "전날 데이터가 0건이면 점수를 임의로 50점 처리하지 않고 데이터 부족으로 표시합니다."
       ]
     }

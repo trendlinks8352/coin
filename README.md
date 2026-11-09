@@ -15,9 +15,9 @@
 Google News RSS 다중 쿼리로 Nasdaq Composite/100, SOX, Nvidia, AMD, Broadcom, Micron, TSMC, ASML, Intel, HBM/DRAM/NAND와 한국 반도체 기업/산업 뉴스를 각각 검색하고, 제목·요약 중복 제거 후 전날(KST 00:00~24:00) 기사만 남깁니다.
 
 ### 커뮤니티
-- Reddit: 공식 OAuth Data API 사용. Reddit 앱 등록 후 GitHub Actions Secrets에 `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USER_AGENT` 등록이 필요합니다.
+- Reddit: Google News RSS에서 `site:reddit.com` 검색으로 공개 색인된 게시글만 수집합니다. Reddit API/OAuth, 앱 등록, GitHub Secrets 설정은 필요하지 않습니다.
 - DCInside / Naver Cafe: Google News RSS에 공개 색인된 `dcinside.com`, `gall.dcinside.com`, `cafe.naver.com` 게시글만 수집합니다. 비공개 카페, 로그인 전용 게시글, 검색엔진에 색인되지 않은 게시물은 가져올 수 없습니다.
-- OAuth가 설정되지 않으면 Reddit 수집은 건너뛰고, 화면에 수집 건수가 0으로 표시됩니다. 가짜 점수를 채우지 않습니다.
+- Reddit도 동일하게 Google 검색에 노출된 공개 게시글만 수집합니다. 따라서 Reddit 전체 게시글을 빠짐없이 가져오는 방식은 아니며, Google 색인 범위에 따라 누락될 수 있습니다. 별도 API 인증은 사용하지 않습니다.
 
 ## 점수 계산
 각 기사/게시글을 긍정(+1), 중립(0), 부정(-1)으로 분류합니다.
@@ -35,16 +35,6 @@ Google News RSS 다중 쿼리로 Nasdaq Composite/100, SOX, Nvidia, AMD, Broadco
 2. Settings → Pages → Deploy from a branch → `main` / `/ (root)` 선택
 3. Actions → `Update Nasdaq Semiconductor Sentiment` → Run workflow
 4. GitHub Actions가 매일 08:35 KST에 전날 데이터를 수집하고 `data.json`, `history.json`을 갱신합니다.
-
-## Reddit OAuth 설정
-1. Reddit Developer Portal에서 허용된 Data API 앱을 등록합니다.
-2. GitHub 저장소 Settings → Secrets and variables → Actions → New repository secret
-3. `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USER_AGENT`를 등록합니다.
-4. Actions를 수동 실행해 Reddit 수집 성공 여부를 확인합니다.
-
-Reddit은 OAuth 인증과 정책 준수가 필요합니다. 공식 정책과 접근 조건을 확인하세요:
-- https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki
-- https://redditinc.com/policies/data-api-terms
 
 ## 중요
 - 전날 데이터가 없으면 점수는 `null` / 데이터 부족입니다. 50점으로 위장하지 않습니다.
