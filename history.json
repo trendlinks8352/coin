@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "date": "2026-11-08",
+    "us_news": 41,
+    "kr_news": 54,
+    "us_community": 40,
+    "kr_community": 42
+  }
+]
